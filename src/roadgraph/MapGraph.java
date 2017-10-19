@@ -8,7 +8,6 @@ package roadgraph;
 
 
 import geography.GeographicPoint;
-import geography.RoadSegment;
 import util.GraphLoader;
 
 import java.util.*;
@@ -21,14 +20,14 @@ import java.util.function.Consumer;
  *         Nodes in the graph are intersections between
  */
 public class MapGraph {
-    private HashMap<GeographicPoint, ArrayList<RoadSegment>> graphMap;
+    private List<NodeGraph> nodeList;
 
 
     /**
      * Create a new empty MapGraph
      */
     public MapGraph() {
-        graphMap = new HashMap<GeographicPoint, ArrayList<RoadSegment>>();
+        nodeList = new ArrayList<NodeGraph>();
     }
 
     public static void main(String[] args) {
@@ -78,7 +77,7 @@ public class MapGraph {
 
 		/* Use this code in Week 3 End of Week Quiz */
         /*MapGraph theMap = new MapGraph();
-		System.out.print("DONE. \nLoading the map...");
+        System.out.print("DONE. \nLoading the map...");
 		GraphLoader.loadRoadMap("data/maps/utc.map", theMap);
 		System.out.println("DONE.");
 
@@ -99,7 +98,7 @@ public class MapGraph {
      * @return The number of vertices in the graph.
      */
     public int getNumVertices() {
-        return graphMap.size();
+        return nodeList.size();
     }
 
     /**
@@ -108,7 +107,11 @@ public class MapGraph {
      * @return The vertices in this graph as GeographicPoints
      */
     public Set<GeographicPoint> getVertices() {
-        return graphMap.keySet();
+        Set<GeographicPoint> verticesSet = new HashSet<GeographicPoint>();
+        for (NodeGraph currNode : nodeList) {
+            verticesSet.add(currNode.getLocation());
+        }
+        return verticesSet;
     }
 
     /**
@@ -118,8 +121,8 @@ public class MapGraph {
      */
     public int getNumEdges() {
         int numEdges = 0;
-        for (GeographicPoint currGP : graphMap.keySet()) {
-            numEdges += graphMap.get(currGP).size();
+        for (NodeGraph currNode : nodeList) {
+            numEdges += currNode.getNumSegments();
         }
         return numEdges;
     }
@@ -134,9 +137,9 @@ public class MapGraph {
      * was already in the graph, or the parameter is null).
      */
     public boolean addVertex(GeographicPoint location) {
-        if (graphMap.containsKey(location) || location == null)
+        if (nodeList.contains(location) || location == null)
             return false;
-        graphMap.put(location, new ArrayList<RoadSegment>());
+        nodeList.add(new NodeGraph(location));
         return true;
     }
 
@@ -155,12 +158,24 @@ public class MapGraph {
      */
     public void addEdge(GeographicPoint from, GeographicPoint to, String roadName,
                         String roadType, double length) throws IllegalArgumentException {
-        ArrayList<GeographicPoint> geometry = new ArrayList<GeographicPoint>();
-        geometry.add(from);
-        geometry.add(to);
-        RoadSegment currRD = new RoadSegment(from, to, geometry, roadName, roadType, length);
-        graphMap.get(from).add(currRD);
+        NodeGraph startNode = searchForNode(from);
+        if (startNode != null)
+            startNode.AddRoadSegment(to, roadName, roadType, length);
 
+    }
+
+    /**
+     * Search for node from given location
+     *
+     * @param geographicPoint location to search for node.
+     * @return
+     */
+    private NodeGraph searchForNode(GeographicPoint geographicPoint) {
+        for (NodeGraph currNode : nodeList) {
+            if (currNode.getLocation().equals(geographicPoint))
+                return currNode;
+        }
+        return null;
     }
 
     /**
@@ -190,11 +205,74 @@ public class MapGraph {
     public List<GeographicPoint> bfs(GeographicPoint start,
                                      GeographicPoint goal, Consumer<GeographicPoint> nodeSearched) {
 
+        NodeGraph startNode = searchForNode(start);
+        NodeGraph goalNode = searchForNode(goal);
+        if (startNode == null || goalNode == null)
+            return null;
 
-        // Hook for visualization.  See writeup.
-        //nodeSearched.accept(next.getLocation());
+        Queue<NodeGraph> queue = new LinkedList<NodeGraph>();
+        HashSet<NodeGraph> visited = new HashSet<NodeGraph>();
+        HashMap<NodeGraph, NodeGraph> parentMap = new HashMap<NodeGraph, NodeGraph>();
+        boolean found = false;
+        queue.add(startNode);
 
-        return null;
+        while (!queue.isEmpty()) {
+            NodeGraph currNode = queue.remove();
+            if (currNode == goalNode) {
+                found = true;
+                break;
+            }
+            List<NodeGraph> neighbors = getNeighbors(currNode);
+            ListIterator<NodeGraph> it = neighbors.listIterator(neighbors.size());
+            while (it.hasPrevious()) {
+                NodeGraph nextNode = it.previous();
+                nodeSearched.accept(nextNode.getLocation());
+                if (!visited.contains(nextNode)) {
+                    visited.add(nextNode);
+                    parentMap.put(nextNode, currNode);
+                    queue.add(nextNode);
+                }
+            }
+        }
+        return reconstructPath(found, goalNode, startNode, parentMap);
+    }
+
+    /**
+     * @param found     true, if goalNode is found.
+     * @param goalNode  The goal node
+     * @param startNode The starting node
+     * @param parentMap to keep track of the path
+     * @return the list of intersections forms shortest path
+     */
+    private LinkedList<GeographicPoint> reconstructPath(boolean found, NodeGraph goalNode, NodeGraph startNode, HashMap<NodeGraph, NodeGraph> parentMap) {
+        LinkedList<GeographicPoint> path = new LinkedList<GeographicPoint>();
+        if (!found) {
+            System.out.println("No path exists");
+            return path;
+        }
+        NodeGraph curr = goalNode;
+        while (curr != startNode) {
+            path.addFirst(curr.getLocation());
+            curr = parentMap.get(curr);
+        }
+        path.addFirst(startNode.getLocation());
+        return path;
+    }
+
+    /**
+     * Create neighbors list for given node
+     *
+     * @param nodeGraph The given node
+     * @return neighbors list
+     */
+    private List<NodeGraph> getNeighbors(NodeGraph nodeGraph) {
+        List<NodeGraph> neigborsList = new ArrayList<NodeGraph>();
+        for (GeographicPoint currGP : nodeGraph.getNeighborsList()) {
+            NodeGraph currN = searchForNode(currGP);
+            if (currN != null)
+                neigborsList.add(currN);
+        }
+        return neigborsList;
     }
 
     /**
