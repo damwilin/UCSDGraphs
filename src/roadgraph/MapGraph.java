@@ -302,7 +302,41 @@ public class MapGraph {
      */
     public List<GeographicPoint> dijkstra(GeographicPoint start,
                                           GeographicPoint goal, Consumer<GeographicPoint> nodeSearched) {
-        // TODO: Implement this method in WEEK 4
+        NodeGraph startNode = searchForNode(start);
+        NodeGraph goalNode = searchForNode(goal);
+        if (startNode == null || goalNode == null)
+            return null;
+
+
+        PriorityQueue<NodeGraph> priorityQueue = new PriorityQueue<NodeGraph>();
+        HashSet<NodeGraph> visited = new HashSet<NodeGraph>();
+        HashMap<NodeGraph, NodeGraph> parentMap = new HashMap<NodeGraph, NodeGraph>();
+        boolean found = false;
+        priorityQueue.add(startNode);
+        while (!priorityQueue.isEmpty()) {
+            NodeGraph currNode = priorityQueue.poll();
+            if (!visited.contains(currNode)) {
+                visited.add(currNode);
+                if (currNode == goalNode) {
+                    found = true;
+                    break;
+                }
+                double distance = Double.POSITIVE_INFINITY;
+                NodeGraph nearestNeighbor = null;
+                for (NodeGraph currNeighbor : getNeighbors(currNode)) {
+                    double currDistance = currNode.getLocation().distance(currNeighbor.getLocation());
+                    if (!visited.contains(currNeighbor) && currDistance < distance) {
+                        distance = currDistance;
+                        nearestNeighbor = currNeighbor;
+                    }
+                }
+                if (nearestNeighbor != null) {
+                    priorityQueue.add(nearestNeighbor);
+                    parentMap.put(currNode, nearestNeighbor);
+                }
+            }
+        }
+
 
         // Hook for visualization.  See writeup.
         //nodeSearched.accept(next.getLocation());
