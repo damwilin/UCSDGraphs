@@ -12,11 +12,9 @@ import util.GraphLoader;
  * Grader for Module 2, Part 2
  */
 public class GraphGrader {
-    private String feedback;
-
-    private int correct;
-
     private static final int TESTS = 16;
+    private String feedback;
+    private int correct;
 
     /**
      * Turn a list into a readable and printable string
@@ -131,7 +129,7 @@ public class GraphGrader {
     	else if (result.size() != corr.size() || !result.containsAll(corr)) {
             feedback += "FAILED. Expected " + printList(corr) + ", got " + printList(result) + ". ";
             if (result.size() > corr.size()) {
-                feedback += "Make sure you aren't including vertices of distance 1. ";
+                feedback += "Make sure you aren't including vertices of getDistance 1. ";
             }
             if (result.size() < corr.size()) { 
                 feedback += "Make sure you're exploring all possible paths. ";

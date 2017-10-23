@@ -1,18 +1,18 @@
 package roadgraph;
 
-import geography.*;
+import geography.GeographicPoint;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 public class NodeGraph {
     private GeographicPoint location;
-    private List<RoadSegment> roadSegments;
+    private HashSet<MapEdge> edges;
 
 
     public NodeGraph(GeographicPoint location) {
         this.location = location;
-        roadSegments = new ArrayList<RoadSegment>();
+        edges = new HashSet<MapEdge>();
     }
 
     /**
@@ -24,50 +24,32 @@ public class NodeGraph {
         return location;
     }
 
-    /**
-     * Return list of RoadSegments.
-     *
-     * @return List<RoadSegment>
-     */
-    public List<RoadSegment> getRoadSegments() {
-        return roadSegments;
+    public Set<MapEdge> getEdges() {
+        return edges;
     }
 
-    /**
-     * Return size of roadSegments list
-     *
-     * @return size int
-     */
-    public int getNumSegments() {
-        return roadSegments.size();
-    }
-
-    /**
-     * Create and add new RoadSegment to roadSegments list.
-     *
-     * @param to       localization of road end
-     * @param roadName name of road
-     * @param roadType type of road
-     * @param length   length of road
-     */
-    public void AddRoadSegment(GeographicPoint to, String roadName, String roadType, double length) {
-        List<GeographicPoint> geometry = new ArrayList<GeographicPoint>();
-        geometry.add(location);
-        geometry.add(to);
-        RoadSegment newRS = new RoadSegment(location, to, geometry, roadName, roadType, length);
-        roadSegments.add(newRS);
-    }
-
-    /**
-     * Create list of neighbors from roadSegments list
-     *
-     * @return List of neighbors
-     */
-    public List<GeographicPoint> getNeighborsList() {
-        List<GeographicPoint> neighbors = new ArrayList<GeographicPoint>();
-        for (RoadSegment roadSegment : getRoadSegments()) {
-            neighbors.add(roadSegment.getOtherPoint(location));
+    public Set<NodeGraph> getNeighbors() {
+        Set<NodeGraph> neighborsSet = new HashSet<NodeGraph>();
+        for (MapEdge currEdge : edges) {
+            neighborsSet.add(currEdge.getOtherNode(this));
         }
-        return neighbors;
+        return neighborsSet;
+    }
+
+    public void addEdge(MapEdge nEdge) {
+        edges.add(nEdge);
+    }
+
+    @Override
+    public int hashCode() {
+        return location.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof NodeGraph) || obj == null)
+            return false;
+        NodeGraph node = (NodeGraph) obj;
+        return node.location.equals(this.location);
     }
 }

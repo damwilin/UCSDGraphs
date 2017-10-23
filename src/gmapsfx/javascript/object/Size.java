@@ -20,8 +20,8 @@ import gmapsfx.javascript.JavascriptObject;
 
 /**
  * Size object corresponding to <a href="https://developers.google.com/maps/documentation/javascript/reference#Size">google.maps.Size</a>
-* 
-* Two-dimensonal size, where width is the distance on the x-axis, and height is the distance on the y-axis.
+*
+ * Two-dimensonal size, where width is the getDistance on the x-axis, and height is the getDistance on the y-axis.
 * 
 * @author Rob Terpilowski
  */

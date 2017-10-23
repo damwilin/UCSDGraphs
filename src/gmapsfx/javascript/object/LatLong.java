@@ -49,11 +49,11 @@ public class LatLong extends JavascriptObject {
     }
 
     /**
-     * From v3_epoly.js, calculates the distance between this LatLong point and
+     * From v3_epoly.js, calculates the getDistance between this LatLong point and
      * another.
      *
-     * @param end The end point to calculate the distance to.
-     * @return The distance, in metres, to the end point.
+     * @param end The end point to calculate the getDistance to.
+     * @return The getDistance, in metres, to the end point.
      */
     public double distanceFrom(LatLong end) {
 
@@ -90,11 +90,11 @@ public class LatLong extends JavascriptObject {
 
     /**
      * Calculates the LatLong position of the end point of a line the specified
-     * distance from this LatLong, along the provided bearing, where North is 0,
+     * getDistance from this LatLong, along the provided bearing, where North is 0,
      * East is 90 etc.
      *
      * @param bearing The bearing, in degrees, with North as 0, East as 90 etc.
-     * @param distance The distance in metres.
+     * @param distance The getDistance in metres.
      * @return A new LatLong indicating the end point.
      */
     public LatLong getDestinationPoint(double bearing, double distance) {

@@ -66,7 +66,7 @@ public abstract class Graph {
 
         //For testing Part 2 functionality
         // Test your distance2 code here.
-        System.out.println("Testing distance-two methods on sample graphs...");
+        System.out.println("Testing getDistance-two methods on sample graphs...");
         System.out.println("Goal: implement method using two approaches.");
 
 

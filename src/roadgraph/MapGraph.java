@@ -20,14 +20,16 @@ import java.util.function.Consumer;
  *         Nodes in the graph are intersections between
  */
 public class MapGraph {
-    private List<NodeGraph> nodeList;
+    private HashMap<GeographicPoint, NodeGraph> pointNodeMap;
+    private HashSet<MapEdge> edges;
 
 
     /**
      * Create a new empty MapGraph
      */
     public MapGraph() {
-        nodeList = new ArrayList<NodeGraph>();
+        pointNodeMap = new HashMap<GeographicPoint, NodeGraph>();
+        edges = new HashSet<MapEdge>();
     }
 
     public static void main(String[] args) {
@@ -98,7 +100,7 @@ public class MapGraph {
      * @return The number of vertices in the graph.
      */
     public int getNumVertices() {
-        return nodeList.size();
+        return pointNodeMap.values().size();
     }
 
     /**
@@ -107,11 +109,7 @@ public class MapGraph {
      * @return The vertices in this graph as GeographicPoints
      */
     public Set<GeographicPoint> getVertices() {
-        Set<GeographicPoint> verticesSet = new HashSet<GeographicPoint>();
-        for (NodeGraph currNode : nodeList) {
-            verticesSet.add(currNode.getLocation());
-        }
-        return verticesSet;
+        return pointNodeMap.keySet();
     }
 
     /**
@@ -120,11 +118,7 @@ public class MapGraph {
      * @return The number of edges in the graph.
      */
     public int getNumEdges() {
-        int numEdges = 0;
-        for (NodeGraph currNode : nodeList) {
-            numEdges += currNode.getNumSegments();
-        }
-        return numEdges;
+        return edges.size();
     }
 
     /**
@@ -137,9 +131,10 @@ public class MapGraph {
      * was already in the graph, or the parameter is null).
      */
     public boolean addVertex(GeographicPoint location) {
-        if (nodeList.contains(location) || location == null)
+        if (location == null || pointNodeMap.containsKey(location))
             return false;
-        nodeList.add(new NodeGraph(location));
+        NodeGraph nNode = new NodeGraph(location);
+        pointNodeMap.put(location, nNode);
         return true;
     }
 
@@ -158,25 +153,13 @@ public class MapGraph {
      */
     public void addEdge(GeographicPoint from, GeographicPoint to, String roadName,
                         String roadType, double length) throws IllegalArgumentException {
-        NodeGraph startNode = searchForNode(from);
-        if (startNode != null)
-            startNode.AddRoadSegment(to, roadName, roadType, length);
-
+        NodeGraph fromNode = pointNodeMap.get(from);
+        NodeGraph toNode = pointNodeMap.get(to);
+        MapEdge nEdge = new MapEdge(roadName, roadType, fromNode, toNode, length);
+        edges.add(nEdge);
+        fromNode.addEdge(nEdge);
     }
 
-    /**
-     * Search for node from given location
-     *
-     * @param geographicPoint location to search for node.
-     * @return
-     */
-    private NodeGraph searchForNode(GeographicPoint geographicPoint) {
-        for (NodeGraph currNode : nodeList) {
-            if (currNode.getLocation().equals(geographicPoint))
-                return currNode;
-        }
-        return null;
-    }
 
     /**
      * Find the path from start to goal using breadth first search
@@ -204,75 +187,61 @@ public class MapGraph {
      */
     public List<GeographicPoint> bfs(GeographicPoint start,
                                      GeographicPoint goal, Consumer<GeographicPoint> nodeSearched) {
+        //Check validity of inputs
+        if (start == null || goal == null)
+            throw new NullPointerException("Cannot find route from or to null node");
+        NodeGraph startNode = pointNodeMap.get(start);
+        NodeGraph goalNode = pointNodeMap.get(goal);
+        if (startNode == null || goalNode == null) {
+            throw new NullPointerException("Start or End node doesn't exist");
+        }
 
-        NodeGraph startNode = searchForNode(start);
-        NodeGraph goalNode = searchForNode(goal);
-        if (startNode == null || goalNode == null)
-            return null;
-
-        Queue<NodeGraph> queue = new LinkedList<NodeGraph>();
-        HashSet<NodeGraph> visited = new HashSet<NodeGraph>();
+        //Setup BFS
         HashMap<NodeGraph, NodeGraph> parentMap = new HashMap<NodeGraph, NodeGraph>();
-        boolean found = false;
-        queue.add(startNode);
+        Queue<NodeGraph> toExplore = new LinkedList<NodeGraph>();
+        HashSet<NodeGraph> visited = new HashSet<NodeGraph>();
+        toExplore.add(startNode);
+        NodeGraph next = null;
 
-        while (!queue.isEmpty()) {
-            NodeGraph currNode = queue.remove();
-            if (currNode == goalNode) {
-                found = true;
+        while (!toExplore.isEmpty()) {
+            next = toExplore.remove();
+            //hook for visualization
+            nodeSearched.accept(next.getLocation());
+
+            if (next.equals(goalNode))
                 break;
-            }
-            List<NodeGraph> neighbors = getNeighbors(currNode);
-            ListIterator<NodeGraph> it = neighbors.listIterator(neighbors.size());
-            while (it.hasPrevious()) {
-                NodeGraph nextNode = it.previous();
-                nodeSearched.accept(nextNode.getLocation());
-                if (!visited.contains(nextNode)) {
-                    visited.add(nextNode);
-                    parentMap.put(nextNode, currNode);
-                    queue.add(nextNode);
+            Set<NodeGraph> neighbors = getNeighbors(next);
+            for (NodeGraph currNeighbor : neighbors) {
+                if (!visited.contains(neighbors)) {
+                    visited.add(currNeighbor);
+                    parentMap.put(currNeighbor, next);
+                    toExplore.add(currNeighbor);
                 }
             }
         }
-        return reconstructPath(found, goalNode, startNode, parentMap);
+        if (!next.equals(goalNode)) {
+            System.out.println("No path found from " + start + " to " + goal);
+            return null;
+        }
+        //Reconstruct the parent path
+        return reconstructPath(parentMap, startNode, goalNode);
     }
 
-    /**
-     * @param found     true, if goalNode is found.
-     * @param goalNode  The goal node
-     * @param startNode The starting node
-     * @param parentMap to keep track of the path
-     * @return the list of intersections forms shortest path
-     */
-    private LinkedList<GeographicPoint> reconstructPath(boolean found, NodeGraph goalNode, NodeGraph startNode, HashMap<NodeGraph, NodeGraph> parentMap) {
+    private List<GeographicPoint> reconstructPath(HashMap<NodeGraph, NodeGraph> parentMap, NodeGraph startNode, NodeGraph goalNode) {
         LinkedList<GeographicPoint> path = new LinkedList<GeographicPoint>();
-        if (!found) {
-            System.out.println("No path exists");
-            return path;
+        NodeGraph current = goalNode;
+
+        while (!current.equals(startNode)) {
+            path.addFirst(current.getLocation());
+            current = parentMap.get(current);
         }
-        NodeGraph curr = goalNode;
-        while (curr != startNode) {
-            path.addFirst(curr.getLocation());
-            curr = parentMap.get(curr);
-        }
+        //add start
         path.addFirst(startNode.getLocation());
         return path;
     }
 
-    /**
-     * Create neighbors list for given node
-     *
-     * @param nodeGraph The given node
-     * @return neighbors list
-     */
-    private List<NodeGraph> getNeighbors(NodeGraph nodeGraph) {
-        List<NodeGraph> neigborsList = new ArrayList<NodeGraph>();
-        for (GeographicPoint currGP : nodeGraph.getNeighborsList()) {
-            NodeGraph currN = searchForNode(currGP);
-            if (currN != null)
-                neigborsList.add(currN);
-        }
-        return neigborsList;
+    private Set<NodeGraph> getNeighbors(NodeGraph next) {
+        return next.getNeighbors();
     }
 
     /**
@@ -302,45 +271,9 @@ public class MapGraph {
      */
     public List<GeographicPoint> dijkstra(GeographicPoint start,
                                           GeographicPoint goal, Consumer<GeographicPoint> nodeSearched) {
-        NodeGraph startNode = searchForNode(start);
-        NodeGraph goalNode = searchForNode(goal);
-        if (startNode == null || goalNode == null)
-            return null;
-
-
-        PriorityQueue<NodeGraph> priorityQueue = new PriorityQueue<NodeGraph>();
-        HashSet<NodeGraph> visited = new HashSet<NodeGraph>();
-        HashMap<NodeGraph, NodeGraph> parentMap = new HashMap<NodeGraph, NodeGraph>();
-        boolean found = false;
-        priorityQueue.add(startNode);
-        while (!priorityQueue.isEmpty()) {
-            NodeGraph currNode = priorityQueue.poll();
-            if (!visited.contains(currNode)) {
-                visited.add(currNode);
-                if (currNode == goalNode) {
-                    found = true;
-                    break;
-                }
-                double distance = Double.POSITIVE_INFINITY;
-                NodeGraph nearestNeighbor = null;
-                for (NodeGraph currNeighbor : getNeighbors(currNode)) {
-                    double currDistance = currNode.getLocation().distance(currNeighbor.getLocation());
-                    if (!visited.contains(currNeighbor) && currDistance < distance) {
-                        distance = currDistance;
-                        nearestNeighbor = currNeighbor;
-                    }
-                }
-                if (nearestNeighbor != null) {
-                    priorityQueue.add(nearestNeighbor);
-                    parentMap.put(currNode, nearestNeighbor);
-                }
-            }
-        }
-
 
         // Hook for visualization.  See writeup.
         //nodeSearched.accept(next.getLocation());
-
         return null;
     }
 
