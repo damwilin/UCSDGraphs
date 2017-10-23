@@ -5,14 +5,17 @@ import geography.GeographicPoint;
 import java.util.HashSet;
 import java.util.Set;
 
-public class NodeGraph {
+public class NodeGraph implements Comparable<NodeGraph> {
     private GeographicPoint location;
     private HashSet<MapEdge> edges;
+    private double distanceFromStart;
+    private double DEFAULT_DISTANCE = Double.POSITIVE_INFINITY;
 
 
     public NodeGraph(GeographicPoint location) {
         this.location = location;
         edges = new HashSet<MapEdge>();
+        distanceFromStart = DEFAULT_DISTANCE;
     }
 
     /**
@@ -40,6 +43,18 @@ public class NodeGraph {
         edges.add(nEdge);
     }
 
+    public double getDistanceFromStart() {
+        return distanceFromStart;
+    }
+
+    public void setDistanceFromStart(double distanceFromStart) {
+        this.distanceFromStart = distanceFromStart;
+    }
+
+    public double getDistanceTo(NodeGraph o) {
+        return this.getLocation().distance(o.getLocation());
+    }
+
     @Override
     public int hashCode() {
         return location.hashCode();
@@ -51,5 +66,10 @@ public class NodeGraph {
             return false;
         NodeGraph node = (NodeGraph) obj;
         return node.location.equals(this.location);
+    }
+
+    @Override
+    public int compareTo(NodeGraph o) {
+        return Double.compare(this.distanceFromStart, o.distanceFromStart);
     }
 }

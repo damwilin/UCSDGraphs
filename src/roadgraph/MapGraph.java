@@ -210,9 +210,8 @@ public class MapGraph {
 
             if (next.equals(goalNode))
                 break;
-            Set<NodeGraph> neighbors = getNeighbors(next);
-            for (NodeGraph currNeighbor : neighbors) {
-                if (!visited.contains(neighbors)) {
+            for (NodeGraph currNeighbor : next.getNeighbors()) {
+                if (!visited.contains(currNeighbor)) {
                     visited.add(currNeighbor);
                     parentMap.put(currNeighbor, next);
                     toExplore.add(currNeighbor);
@@ -238,10 +237,6 @@ public class MapGraph {
         //add start
         path.addFirst(startNode.getLocation());
         return path;
-    }
-
-    private Set<NodeGraph> getNeighbors(NodeGraph next) {
-        return next.getNeighbors();
     }
 
     /**
@@ -272,9 +267,43 @@ public class MapGraph {
     public List<GeographicPoint> dijkstra(GeographicPoint start,
                                           GeographicPoint goal, Consumer<GeographicPoint> nodeSearched) {
 
-        // Hook for visualization.  See writeup.
-        //nodeSearched.accept(next.getLocation());
-        return null;
+        //Check validity of inputs
+        if (start == null || goal == null)
+            throw new NullPointerException("Cannot find route from or to null node");
+        NodeGraph startNode = pointNodeMap.get(start);
+        NodeGraph goalNode = pointNodeMap.get(goal);
+        if (startNode == null || goalNode == null) {
+            throw new NullPointerException("Start or End node doesn't exist");
+        }
+
+        //Setup dijkstra
+        PriorityQueue<NodeGraph> priorityQueue = new PriorityQueue<NodeGraph>();
+        HashSet<NodeGraph> visited = new HashSet<NodeGraph>();
+        HashMap<NodeGraph, NodeGraph> parentMap = new HashMap<NodeGraph, NodeGraph>();
+        startNode.setDistanceFromStart(0);
+        priorityQueue.add(startNode);
+        NodeGraph currNode = null;
+
+        while (!priorityQueue.isEmpty()) {
+            currNode = priorityQueue.poll();
+            nodeSearched.accept(currNode.getLocation());
+            if (!visited.contains(currNode)) {
+                visited.add(currNode);
+                if (currNode.equals(goalNode))
+                    break;
+                for (NodeGraph currNeighbor : currNode.getNeighbors()) {
+                    if (!visited.contains(currNeighbor)) {
+                        double distanceFromCurr = currNeighbor.getDistanceTo(currNode);
+                        double distanceFromStart = distanceFromCurr + currNode.getDistanceFromStart();
+                        currNeighbor.setDistanceFromStart(distanceFromStart);
+                        priorityQueue.add(currNeighbor);
+                        parentMap.put(currNeighbor, currNode);
+                    }
+                }
+            }
+
+        }
+        return reconstructPath(parentMap, startNode, goalNode);
     }
 
     /**

@@ -3,8 +3,7 @@ package roadgraph;
 /**
  * Created by Damian on 10/23/2017.
  */
-public class MapEdge {
-    static final double DEFAULT_LENGTH = Double.POSITIVE_INFINITY;
+public class MapEdge implements Comparable<MapEdge> {
     private String roadName;
     private String roadType;
     private NodeGraph start;
@@ -41,6 +40,10 @@ public class MapEdge {
         else if (node.equals(end))
             return start;
         throw new IllegalArgumentException("This node is not in the edge");
+    }
 
+    @Override
+    public int compareTo(MapEdge o) {
+        return Double.compare(this.getLength(), o.getLength());
     }
 }
