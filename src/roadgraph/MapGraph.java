@@ -33,12 +33,13 @@ public class MapGraph {
     }
 
     public static void main(String[] args) {
+        /*
         System.out.print("Making a new map...");
         MapGraph firstMap = new MapGraph();
         System.out.print("DONE. \nLoading the map...");
         GraphLoader.loadRoadMap("data/testdata/simpletest.map", firstMap);
         System.out.println("DONE.");
-
+*/
         // You can use this method for testing.
 
 
@@ -46,6 +47,8 @@ public class MapGraph {
          * the Week 3 End of Week Quiz, EVEN IF you score 100% on the
 		 * programming assignment.
 		 */
+
+/*
         MapGraph simpleTestMap = new MapGraph();
         GraphLoader.loadRoadMap("data/testdata/simpletest.map", simpleTestMap);
 
@@ -76,9 +79,10 @@ public class MapGraph {
         testroute2 = testMap.aStarSearch(testStart, testEnd);
 
 
+*/
+        /* Use this code in Week 3 End of Week Quiz */
 
-		/* Use this code in Week 3 End of Week Quiz */
-        /*MapGraph theMap = new MapGraph();
+        MapGraph theMap = new MapGraph();
         System.out.print("DONE. \nLoading the map...");
 		GraphLoader.loadRoadMap("data/maps/utc.map", theMap);
 		System.out.println("DONE.");
@@ -89,8 +93,6 @@ public class MapGraph {
 
 		List<GeographicPoint> route = theMap.dijkstra(start,end);
 		List<GeographicPoint> route2 = theMap.aStarSearch(start,end);
-
-		*/
 
     }
 
@@ -131,11 +133,17 @@ public class MapGraph {
      * was already in the graph, or the parameter is null).
      */
     public boolean addVertex(GeographicPoint location) {
-        if (location == null || pointNodeMap.containsKey(location))
+        if (location == null) {
             return false;
-        NodeGraph nNode = new NodeGraph(location);
-        pointNodeMap.put(location, nNode);
-        return true;
+        }
+        NodeGraph n = pointNodeMap.get(location);
+        if (n == null) {
+            n = new NodeGraph(location);
+            pointNodeMap.put(location, n);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /**
@@ -153,11 +161,18 @@ public class MapGraph {
      */
     public void addEdge(GeographicPoint from, GeographicPoint to, String roadName,
                         String roadType, double length) throws IllegalArgumentException {
-        NodeGraph fromNode = pointNodeMap.get(from);
-        NodeGraph toNode = pointNodeMap.get(to);
-        MapEdge nEdge = new MapEdge(roadName, roadType, fromNode, toNode, length);
-        edges.add(nEdge);
-        fromNode.addEdge(nEdge);
+        NodeGraph n1 = pointNodeMap.get(from);
+        NodeGraph n2 = pointNodeMap.get(to);
+
+        // check nodes are valid
+        if (n1 == null)
+            throw new NullPointerException("addEdge: pt1:" + from + "is not in graph");
+        if (n2 == null)
+            throw new NullPointerException("addEdge: pt2:" + to + "is not in graph");
+
+        MapEdge edge = new MapEdge(roadName, roadType, n1, n2, length);
+        edges.add(edge);
+        n1.addEdge(edge);
     }
 
 
@@ -197,6 +212,7 @@ public class MapGraph {
         }
 
         //Setup BFS
+        setAllDefaultDistance();
         HashMap<NodeGraph, NodeGraph> parentMap = new HashMap<NodeGraph, NodeGraph>();
         Queue<NodeGraph> toExplore = new LinkedList<NodeGraph>();
         HashSet<NodeGraph> visited = new HashSet<NodeGraph>();
@@ -207,9 +223,11 @@ public class MapGraph {
             next = toExplore.remove();
             //hook for visualization
             nodeSearched.accept(next.getLocation());
+            System.out.println(next);
 
             if (next.equals(goalNode))
                 break;
+
             for (NodeGraph currNeighbor : next.getNeighbors()) {
                 if (!visited.contains(currNeighbor)) {
                     visited.add(currNeighbor);
@@ -277,6 +295,8 @@ public class MapGraph {
         }
 
         //Setup dijkstra
+        int visitedNodes = 0;
+        setAllDefaultDistance();
         PriorityQueue<NodeGraph> priorityQueue = new PriorityQueue<NodeGraph>();
         HashSet<NodeGraph> visited = new HashSet<NodeGraph>();
         HashMap<NodeGraph, NodeGraph> parentMap = new HashMap<NodeGraph, NodeGraph>();
@@ -286,6 +306,11 @@ public class MapGraph {
 
         while (!priorityQueue.isEmpty()) {
             currNode = priorityQueue.poll();
+            if (currNode != null) {
+                System.out.println("Dijkstra:");
+                System.out.println(currNode);
+                visitedNodes++;
+            }
             nodeSearched.accept(currNode.getLocation());
             if (!visited.contains(currNode)) {
                 visited.add(currNode);
@@ -295,14 +320,18 @@ public class MapGraph {
                     if (!visited.contains(currNeighbor)) {
                         double distanceFromCurr = currNeighbor.getDistanceTo(currNode);
                         double distanceFromStart = distanceFromCurr + currNode.getDistanceFromStart();
-                        currNeighbor.setDistanceFromStart(distanceFromStart);
-                        priorityQueue.add(currNeighbor);
-                        parentMap.put(currNeighbor, currNode);
+                        if (distanceFromStart < currNeighbor.getDistanceFromStart()) {
+                            currNeighbor.setDistanceFromStart(distanceFromStart);
+                            if (!priorityQueue.contains(currNeighbor))
+                                priorityQueue.add(currNeighbor);
+                            parentMap.put(currNeighbor, currNode);
+                        }
                     }
                 }
             }
 
         }
+        System.out.println("Nodes visited: " + visitedNodes);
         return reconstructPath(parentMap, startNode, goalNode);
     }
 
@@ -332,12 +361,59 @@ public class MapGraph {
      */
     public List<GeographicPoint> aStarSearch(GeographicPoint start,
                                              GeographicPoint goal, Consumer<GeographicPoint> nodeSearched) {
-        // TODO: Implement this method in WEEK 4
+        //Check validity of inputs
+        if (start == null || goal == null)
+            throw new NullPointerException("Cannot find route from or to null node");
+        NodeGraph startNode = pointNodeMap.get(start);
+        NodeGraph goalNode = pointNodeMap.get(goal);
+        if (startNode == null || goalNode == null) {
+            throw new NullPointerException("Start or End node doesn't exist");
+        }
 
-        // Hook for visualization.  See writeup.
-        //nodeSearched.accept(next.getLocation());
+        //Setup dijkstra
+        int nodesVisited = 0;
+        setAllDefaultDistance();
+        PriorityQueue<NodeGraph> priorityQueue = new PriorityQueue<NodeGraph>();
+        HashSet<NodeGraph> visited = new HashSet<NodeGraph>();
+        HashMap<NodeGraph, NodeGraph> parentMap = new HashMap<NodeGraph, NodeGraph>();
+        startNode.setDistanceFromStart(0);
+        priorityQueue.add(startNode);
+        NodeGraph currNode = null;
 
-        return null;
+        while (!priorityQueue.isEmpty()) {
+            currNode = priorityQueue.poll();
+            nodeSearched.accept(currNode.getLocation());
+            System.out.println("A*:");
+            System.out.println(currNode);
+            nodesVisited++;
+            if (!visited.contains(currNode)) {
+                visited.add(currNode);
+                if (currNode.equals(goalNode))
+                    break;
+                for (NodeGraph currNeighbor : currNode.getNeighbors()) {
+                    if (!visited.contains(currNeighbor)) {
+                        double distanceFromCurr = currNeighbor.getDistanceTo(currNode);
+                        double distanceFromGoal = currNeighbor.getDistanceTo(goalNode);
+                        double distanceFromStart = distanceFromCurr + distanceFromGoal;
+                        if (distanceFromStart < currNeighbor.getDistanceFromStart()) {
+                            currNeighbor.setDistanceFromStart(distanceFromStart);
+                            if (!priorityQueue.contains(currNeighbor))
+                                priorityQueue.add(currNeighbor);
+                            parentMap.put(currNeighbor, currNode);
+                        }
+                    }
+                }
+            }
+
+        }
+        System.out.println("Nodes visited: " + nodesVisited);
+        return reconstructPath(parentMap, startNode, goalNode);
+    }
+
+    private void setAllDefaultDistance() {
+        for (GeographicPoint gP : pointNodeMap.keySet()) {
+            pointNodeMap.get(gP).setDefaultDistance();
+        }
     }
 
 }

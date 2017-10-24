@@ -52,7 +52,12 @@ public class NodeGraph implements Comparable<NodeGraph> {
     }
 
     public double getDistanceTo(NodeGraph o) {
-        return this.getLocation().distance(o.getLocation());
+        GeographicPoint otherLocation = o.getLocation();
+        return location.distance(otherLocation);
+    }
+
+    public void setDefaultDistance() {
+        distanceFromStart = DEFAULT_DISTANCE;
     }
 
     @Override
@@ -71,5 +76,26 @@ public class NodeGraph implements Comparable<NodeGraph> {
     @Override
     public int compareTo(NodeGraph o) {
         return Double.compare(this.distanceFromStart, o.distanceFromStart);
+    }
+
+    @Override
+    public String toString() {
+        String toReturn = "[NODE at location (" + location + ")";
+        toReturn += " intersects streets: ";
+        for (MapEdge e : edges) {
+            toReturn += e.getRoadName() + ", ";
+        }
+        toReturn += "]";
+        return toReturn;
+    }
+
+    // For debugging, output roadNames as a String.
+    public String roadNamesAsString() {
+        String toReturn = "(";
+        for (MapEdge e : edges) {
+            toReturn += e.getRoadName() + ", ";
+        }
+        toReturn += ")";
+        return toReturn;
     }
 }

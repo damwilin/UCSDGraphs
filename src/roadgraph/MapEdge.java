@@ -3,7 +3,7 @@ package roadgraph;
 /**
  * Created by Damian on 10/23/2017.
  */
-public class MapEdge implements Comparable<MapEdge> {
+public class MapEdge {
     private String roadName;
     private String roadType;
     private NodeGraph start;
@@ -42,8 +42,7 @@ public class MapEdge implements Comparable<MapEdge> {
         throw new IllegalArgumentException("This node is not in the edge");
     }
 
-    @Override
-    public int compareTo(MapEdge o) {
-        return Double.compare(this.getLength(), o.getLength());
+    public String getRoadName() {
+        return roadName;
     }
 }
